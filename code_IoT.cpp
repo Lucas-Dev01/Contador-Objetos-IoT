@@ -1,4 +1,6 @@
 #include <Arduino.h>
+#include <WiFi.h>
+#include <WebServer.h>
 
 // Definição dos pinos
 #define TRIGGER_PIN 5     // Pino TRIG do Sensor Ultrassônico
@@ -7,11 +9,23 @@
 #define LED_PIN_RED 2     // Pino para o LED vermelho
 #define LED_PIN_GREEN 4   // Pino para o LED verde
 
+const char* ssid = "SEU_SSID";
+const char* password = "SUA_SENHA";
+
+WebServer server(80);
+
 int count = 0;
 bool isObjectDetected = false;
 bool readyToCount = true;
 bool buzzerActivated = false; // Estado do buzzer
 const int limiteObjetos = 10; // Limite de objetos para ativar o buzzer
+
+void handleRoot() {
+  String html = "<html><body><h1>Contagem de Objetos</h1>";
+  html += "<p>Objetos detectados: " + String(count) + "</p>";
+  html += "</body></html>";
+  server.send(200, "text/html", html);
+}
 
 void setup() {
   Serial.begin(9600); // Inicia a comunicação Serial
@@ -24,6 +38,19 @@ void setup() {
   digitalWrite(BUZZER_PIN, LOW); // Garante que o buzzer comece desligado
   digitalWrite(LED_PIN_RED, LOW);
   digitalWrite(LED_PIN_GREEN, LOW);
+
+  // Conecta à rede Wi-Fi
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(1000);
+    Serial.println("Conectando à rede Wi-Fi...");
+  }
+  Serial.println("Conectado à rede Wi-Fi!");
+
+  // Configura o servidor web
+  server.on("/", handleRoot);
+  server.begin();
+  Serial.println("Servidor web iniciado.");
 }
 
 void loop() {
@@ -60,6 +87,8 @@ void loop() {
       digitalWrite(LED_PIN_GREEN, LOW); // Apaga LED verde
     }
   }
+
+  server.handleClient(); // Processa as requisições do servidor web
 
   delay(100); // Pequena pausa para estabilização
 }
